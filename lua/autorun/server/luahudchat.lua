@@ -1,0 +1,8 @@
+AddCSLuaFile("luahudchat/init.lua")
+AddCSLuaFile("luahudchat/classes/keyvalues.lua")
+AddCSLuaFile("luahudchat/panels/luarichtext.lua")
+AddCSLuaFile("luahudchat/panels/hudchathistory.lua")
+AddCSLuaFile("luahudchat/panels/hudchatfiltercheckbox.lua")
+AddCSLuaFile("luahudchat/panels/hudchatfilterpanel.lua")
+AddCSLuaFile("luahudchat/panels/hudchatinputline.lua")
+AddCSLuaFile("luahudchat/panels/hudchat.lua")

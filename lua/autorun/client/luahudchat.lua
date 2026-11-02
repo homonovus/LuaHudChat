@@ -1,0 +1,1 @@
+include("luahudchat/init.lua")
