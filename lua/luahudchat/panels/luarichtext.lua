@@ -1,4 +1,4 @@
-local DRAW_CLICK_PANELS = true
+local DRAW_CLICK_PANELS = false
 
 local DRAW_OFFSET_X = 3
 local DRAW_OFFSET_Y = 1
@@ -90,6 +90,8 @@ do
 		return false
 	end
 
+	_G.LuaRichTextMatCache = _G.LuaRichTextMatCache or {}
+
 	---@class LuaRichText: Panel
 	local PANEL = {}
 	---@class Panel
@@ -109,13 +111,19 @@ do
 	---@field fade TFade
 	---@field textStreamIndex integer
 
+	---@class ImageComponent
+	---@field width integer
+	---@field texture string
+	---@field alias boolean
+	---@field text string
+
 	PANEL.m_bResetFades = false
 	PANEL.m_bInteractive = false
 	PANEL.m_bUnusedScrollbarInvis = false
 	PANEL.m_bAllTextAlphaIsZero = false
 
 	---the text in the text window is stored in this buffer
-	---@type string[]
+	---@type (string|ImageComponent)[]
 	PANEL.m_TextStream = {}
 	---an array that holds the index in the buffer to wrap lines at
 	---@type integer[]
@@ -184,27 +192,6 @@ do
 	PANEL._bgColor = Color(255, 255, 255)
 	PANEL._fgColor = Color(255, 255, 255)
 	PANEL._paintBg = true
-
-	function PANEL:OnCursorMoved( lx, ly )
-		if ( !self.Enabled ) then return end
-		if ( !self.Dragging ) then return end
-
-		local x, y = self:ScreenToLocal( 0, gui.MouseY() )
-
-		-- Uck.
-		y = y - self.btnUp:GetTall()
-		y = y - self.HoldPos
-
-		local BtnHeight = self:GetWide()
-		if ( self:GetHideButtons() ) then BtnHeight = 0 end
-
-		local TrackSize = self:GetTall() - BtnHeight * 2 - self.btnGrip:GetTall()
-
-		y = y / TrackSize
-
-		self:SetScroll( y * self.CanvasSize )
-
-	end
 
 	function PANEL:Init()
 		do
@@ -285,7 +272,7 @@ do
 
 			local richtext = scroll:GetParent()
 
-			local x,y = scroll:ScreenToLocal(0, gui.MouseY())
+			local x, y = scroll:ScreenToLocal(0, gui.MouseY())
 			y = y - scroll.btnUp:GetTall() - scroll.HoldPos
 
 			local btnHeight = scroll:GetWide()
@@ -556,8 +543,12 @@ do
 			end
 
 			-- add to the current position
-			surface.SetFont(self._font)
-			x = x + surface.GetTextSize(ch)
+			if istable(ch) then
+				x = x + ch.width
+			else
+				surface.SetFont(self._font)
+				x = x + surface.GetTextSize(ch)
+			end
 		end
 
 		return x, y
@@ -614,8 +605,14 @@ do
 				onRightLine = true
 			end
 
-			surface.SetFont(self._font)
-			local wide = surface.GetTextSize(ch)
+			local wide = 0
+			if istable(ch) then
+				wide = ch.width
+			else
+				---@cast ch string
+				surface.SetFont(self._font)
+				wide = surface.GetTextSize(ch)
+			end
 
 			-- if we've found the position, break
 			if onRightLine then
@@ -661,7 +658,12 @@ do
 
 		for i = iFirst, iLast do
 			local ch = self.m_TextStream[i]
-			charWide = charWide + surface.GetTextSize(ch)
+			if istable(ch) then
+				charWide = charWide + ch.width
+			else
+				---@cast ch string
+				charWide = charWide + surface.GetTextSize(ch)
+			end
 		end
 
 		-- draw selection, if any
@@ -682,8 +684,31 @@ do
 		if renderState.textColor.a ~= 0 then
 			self.m_bAllTextAlphaIsZero = false
 			surface.SetTextPos(renderState.x, renderState.y)
-			local str = table.concat(self.m_TextStream, "", iFirst, iLast)
-			surface.DrawText(str)
+			--local str = table.concat(self.m_TextStream, "", iFirst, iLast)
+			--surface.DrawText(str)
+			for i = iFirst, iLast do
+				local ch = self.m_TextStream[i]
+				if istable(ch) then
+					local x, y = surface.GetTextPos()
+
+					local m = LuaRichTextMatCache[ch.texture]
+					if not m then
+						m = Material(ch.texture, ch.alias and "noclamp" or "noclamp smooth")
+						LuaRichTextMatCache[ch.texture] = m
+					end
+					surface.SetMaterial(m)
+					local a = surface.GetTextColor().a
+					surface.SetDrawColor(255, 255, 255, a)
+					surface.DrawTexturedRect(x, y + math.floor((self:GetLineHeight() / 2) - (ch.width / 2)), ch.width,
+						ch.width)
+
+					x = x + ch.width
+					surface.SetTextPos(x, y)
+				else
+					---@cast ch string
+					surface.DrawText(ch)
+				end
+			end
 		end
 
 		return charWide
@@ -873,7 +898,7 @@ do
 			-- Handle non-drawing characters specially
 			for iT = i, iLast do
 				local c = self.m_TextStream[iT]
-				if c and iscntrl(c) then
+				if isstring(c) and iscntrl(c) then
 					iLast = iT
 					break
 				end
@@ -901,52 +926,57 @@ do
 	end
 
 	function PANEL:DrawDebug()
-        local clip = DisableClipping(true)
-        local w, h = self:GetSize()
-        surface.SetTextColor(255, 0, 0, 255)
-        surface.SetFont(self._font)
+		local clip = DisableClipping(true)
+		local w, h = self:GetSize()
+		surface.SetTextColor(255, 0, 0, 255)
+		surface.SetFont(self._font)
 
-        local y = 0
-        for i = 1, #self.m_FormatStream do
-            local piece = self.m_FormatStream[i]
-            surface.SetTextPos(w + 16, y * 16)
-            surface.DrawText(string.format(
-                "Format Stream #%d: Text[%d] Color %d, %d, %d, %d, PixelsIndent %d, Fade [Start %d, Sustain %d, Length %d, OriginalAlpha %d]",
-                i, piece.textStreamIndex, piece.color.r, piece.color.g, piece.color.b, piece.color.a, piece.pixelsIndent,
-                piece.fade.flFadeStartTime, piece.fade.flFadeSustain, piece.fade.flFadeLength, piece.fade.iOriginalAlpha
-            ))
-            y = y + 1
-        end
-        y = y + 1
-        for i = 1, #self.m_LineBreaks do
-            local piece = self.m_LineBreaks[i]
-            surface.SetTextPos(w + 16, y * 16)
-            surface.DrawText(string.format("Line break #%d = %d", i, piece))
-            y = y + 1
-        end
-        y = y + 1
-        local x = 0
-        local max = 8
-        for i = 1, #self.m_TextStream do
-            local ch = self.m_TextStream[i]
-            surface.SetTextPos(w + 16 + (x * 48), y * 16)
-            if iscntrl(ch) then
-                if ch == "\n" then
-                    surface.DrawText("\\n")
-                else
-                    surface.DrawText("0x" .. string.byte(ch))
-                end
-            elseif isspace(ch) then
-                surface.DrawText("WS")
-            else
-                surface.DrawText(ch)
-            end
+		local y = 0
+		for i = 1, #self.m_FormatStream do
+			local piece = self.m_FormatStream[i]
+			surface.SetTextPos(w + 16, y * 16)
+			surface.DrawText(string.format(
+				"Format Stream #%d: Text[%d] Color %d, %d, %d, %d, PixelsIndent %d, Fade [Start %d, Sustain %d, Length %d, OriginalAlpha %d]",
+				i, piece.textStreamIndex, piece.color.r, piece.color.g, piece.color.b, piece.color.a, piece.pixelsIndent,
+				piece.fade.flFadeStartTime, piece.fade.flFadeSustain, piece.fade.flFadeLength, piece.fade.iOriginalAlpha
+			))
+			y = y + 1
+		end
+		y = y + 1
+		for i = 1, #self.m_LineBreaks do
+			local piece = self.m_LineBreaks[i]
+			surface.SetTextPos(w + 16, y * 16)
+			surface.DrawText(string.format("Line break #%d = %d", i, piece))
+			y = y + 1
+		end
+		y = y + 1
+		local x = 0
+		local max = 8
+		for i = 1, #self.m_TextStream do
+			local ch = self.m_TextStream[i]
+			surface.SetTextPos(w + 16 + (x * 48), y * 16)
+			if istable(ch) then
+				surface.DrawText("IM")
+			else
+				---@cast ch string
+				if iscntrl(ch) then
+					if ch == "\n" then
+						surface.DrawText("\\n")
+					else
+						surface.DrawText("0x" .. string.byte(ch))
+					end
+				elseif isspace(ch) then
+					surface.DrawText("WS")
+				else
+					surface.DrawText(ch)
+				end
+			end
 
-            y = (x > max and y + 1 or y)
-            x = (x > max and 0 or x + 1)
-        end
-        DisableClipping(clip)
-    end
+			y = (x > max and y + 1 or y)
+			x = (x > max and 0 or x + 1)
+		end
+		DisableClipping(clip)
+	end
 
 	---@param startIndex integer
 	function PANEL:GetClickableTextIndexStart(startIndex)
@@ -1296,7 +1326,7 @@ do
 				end
 			end
 
-			local bIsWSpace = isspace(ch)
+			local bIsWSpace = isstring(ch) and isspace(ch)
 
 			local bPreviousWordStartedOnNewLine = wordStartedOnNewLine
 			local iPreviousWordStartIndex = wordStartIndex
@@ -1331,7 +1361,13 @@ do
 			--flLineWidthSoFar = flLineWidthSoFar + w
 
 			surface.SetFont(font)
-			local w = surface.GetTextSize(ch)
+			local w = 0
+			if istable(ch) then
+				w = ch.width
+			else
+				---@cast ch string
+				w = surface.GetTextSize(ch)
+			end
 			flLineWidthSoFar = flLineWidthSoFar + w
 
 			-- See if we've exceeded the width we have available, with
@@ -1339,7 +1375,7 @@ do
 				bForceBreak = true
 			end
 
-			if not iscntrl(ch) then
+			if isstring(ch) and not iscntrl(ch) then
 				justStartedNewLine = false
 			end
 
@@ -1541,7 +1577,8 @@ do
 				selectSpot[2] = self._cursorPos
 
 				if self._cursorPos > 1 and self._cursorPos - 1 < #self.m_TextStream then
-					if isspace(self.m_TextStream[self._cursorPos - 1]) then
+					local ch = self.m_TextStream[self._cursorPos - 1]
+					if isstring(ch) and isspace(ch) then
 						selectSpot[2] = selectSpot[2] - 1
 						self._cursorPos = self._cursorPos - 1
 					end
@@ -1674,7 +1711,8 @@ do
 		-- search right until we hit a whitespace character or a newline
 		self._cursorPos = self._cursorPos + 1
 		while self._cursorPos < #self.m_TextStream do
-			if isspace(self.m_TextStream[self._cursorPos]) then break end
+			local ch = self.m_TextStream[self._cursorPos]
+			if isstring(ch) and isspace(ch) then break end
 
 			self._cursorPos = self._cursorPos + 1
 		end
@@ -1682,7 +1720,8 @@ do
 		-- search right until we hit an nonspace character
 		self._cursorPos = self._cursorPos + 1
 		while self._cursorPos < #self.m_TextStream do
-			if not isspace(self.m_TextStream[self._cursorPos]) then break end
+			local ch = self.m_TextStream[self._cursorPos]
+			if not (isstring(ch) and isspace(ch)) then break end
 
 			self._cursorPos = self._cursorPos + 1
 		end
@@ -1699,7 +1738,8 @@ do
 		-- search left until we hit an nonspace character
 		self._cursorPos = self._cursorPos - 1
 		while self._cursorPos >= 1 do
-			if not isspace(self.m_TextStream[self._cursorPos]) then break end
+			local ch = self.m_TextStream[self._cursorPos]
+			if not (isstring(ch) and isspace(ch)) then break end
 
 			self._cursorPos = self._cursorPos - 1
 		end
@@ -1707,7 +1747,8 @@ do
 		-- search left until we hit a whitespace character or a newline
 		self._cursorPos = self._cursorPos - 1
 		while self._cursorPos >= 1 do
-			if isspace(self.m_TextStream[self._cursorPos]) then break end
+			local ch = self.m_TextStream[self._cursorPos]
+			if isstring(ch) and isspace(ch) then break end
 
 			self._cursorPos = self._cursorPos - 1
 		end
@@ -1770,8 +1811,18 @@ do
 	end
 
 	---Insert a character into the text buffer
-	---@param wch string
+	---@param wch string|ImageComponent
 	function PANEL:InsertChar(wch)
+		if istable(wch) then
+			if self._maxCharCount > 0 and #self.m_TextStream > self._maxCharCount then
+				self:TruncateTextStream()
+			end
+
+			table.insert(self.m_TextStream, wch)
+			return
+		end
+		---@cast wch string
+
 		if utf8.len(wch) > 1 then
 			wch = utf8.sub(wch, 1, 1)
 		end
@@ -1851,6 +1902,8 @@ do
 				local char = self.m_TextStream[i]
 				if char == nil then continue end
 
+				if istable(char) then char = char.text end
+
 				if char == "\n" then
 					buf = buf .. "\r"
 				end
@@ -1899,7 +1952,14 @@ do
 		local total = offset > 1 and #self.m_TextStream - offset or #self.m_TextStream
 		if len == nil or len > total then len = total end
 
-		return table.concat(self.m_TextStream, "", offset, len)
+		local buf = {}
+		for i = offset, len do
+			local ch = self.m_TextStream[i]
+			if istable(ch) then ch = ch.text end
+			table.insert(buf, ch)
+		end
+
+		return table.concat(buf, "")
 	end
 
 	---Set the font of the buffer text
@@ -1930,8 +1990,11 @@ do
 			self:UpdateRenderState(i, renderState)
 			if not renderState.textClickable then break end
 
+			local ch = self.m_TextStream[i]
+			if istable(ch) then ch = ch.text end
+
 			-- copy out the character
-			wBuf = wBuf .. self.m_TextStream[i]
+			wBuf = wBuf .. ch
 		end
 
 		local iFormatStream = self:FindFormatStreamIndexForTextStreamPos(index)
