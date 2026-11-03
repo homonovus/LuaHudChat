@@ -193,6 +193,35 @@ do
 	PANEL._fgColor = Color(255, 255, 255)
 	PANEL._paintBg = true
 
+	local function ScrollPanelButton_OnMousePressed(btn, mousecode)
+		if not btn:IsEnabled() then return end
+
+		btn:MouseCapture(true)
+		btn.Depressed = true
+		btn:OnDepressed()
+		btn:InvalidateLayout(true)
+	end
+	local function ScrollPanelButton_Paint(btn, w,h)
+		local borderName = "ScrollBarButtonBorder"
+		if btn:IsDown() then
+			borderName = "ScrollBarButtonDepressedBorder"
+		end
+
+		LuaHudChat.PaintBorder(borderName, 0,0, w,h)
+	end
+	local function ScrollPanelGrip_Paint(btn, w,h)
+		if LuaHudChat.Borders["ScrollBarSliderBorder"] then
+			LuaHudChat.PaintBorder("ScrollBarSliderBorder", 0,0, w,h)
+		else
+			local borderName = LuaHudChat.SchemeBorders:GetString("ButtonBorder", "RaisedBorder")
+			LuaHudChat.PaintBorder(borderName, 0,0, w,h)
+		end
+	end
+
+	-- scroll bar will scroll a little, then continuous scroll like in windows
+	local SCROLL_BAR_DELAY = 0.400	-- default delay for all scroll bars
+	local SCROLL_BAR_SPEED = 0.050	-- this is how fast the bar scrolls when you hold down the arrow button
+
 	function PANEL:Init()
 		do
 			self.m_bResetFades = false
@@ -257,7 +286,58 @@ do
 		self._cursorPos = 1
 		self._mouseSelection = false
 		self._mouseDragSelection = false
+
 		self._vertScrollBar = vgui.Create("DVScrollBar", self, "ScrollBar")
+		self._vertScrollBar:SetWide(ScreenScaleH(LuaHudChat.SchemeBaseSettings:GetInt("ScrollBar.Wide", 17)))
+
+		self._vertScrollBar.btnUp:SetCursor("arrow")
+		self._vertScrollBar.btnDown:SetCursor("arrow")
+
+		self._vertScrollBar.btnUp.DoClick = function()end
+		self._vertScrollBar.btnDown.DoClick = function()end
+
+		self._vertScrollBar.btnUp.OnMousePressed = ScrollPanelButton_OnMousePressed
+		self._vertScrollBar.btnDown.OnMousePressed = ScrollPanelButton_OnMousePressed
+		self._vertScrollBar.btnUp.Paint = ScrollPanelButton_Paint
+		self._vertScrollBar.btnDown.Paint = ScrollPanelButton_Paint
+		self._vertScrollBar.btnGrip.Paint = ScrollPanelGrip_Paint
+
+		self._vertScrollBar.btnUp:SetFont("Marlett")
+		self._vertScrollBar.btnUp:SetText("t")
+		self._vertScrollBar.btnDown:SetFont("Marlett")
+		self._vertScrollBar.btnDown:SetText("u")
+
+		self._vertScrollBar.Think = function(scroll)
+			local direction = 0
+
+			if scroll.btnUp:IsDown() then -- top button is down
+				direction = -1
+			elseif scroll.btnDown:IsDown() then -- bottom button is down
+				direction = 1
+			end
+
+			if direction ~= 0 then -- a button is down
+				if scroll._respond then
+					local newValue = math.Clamp(math.floor(scroll:GetScroll() + (direction * (self:GetLineHeight()+1))), 0, scroll.CanvasSize)
+					scroll:AddScroll(direction)
+					--scroll:SetScroll(newValue)
+					self._recalcSavedRenderState = true
+				end
+
+				if (scroll._scrollDelay or 0) < SysTime() then
+					scroll._scrollDelay = SysTime() + SCROLL_BAR_SPEED
+					scroll._respond = true
+				else
+					scroll._respond = false
+				end
+			else -- a button is not down
+				-- if neither button is down keep delay at max
+				scroll._scrollDelay = SysTime() + SCROLL_BAR_DELAY
+				scroll._respond = true
+			end
+		end
+
+		--self._vertScrollBar:SetVisible(false)
 		--self._vertScrollBar:AddActionSignalTarget(self)
 		self._vertScrollBar.OnMouseWheeled = function(scroll, delta)
 			if scroll:IsVisible() then
@@ -285,6 +365,7 @@ do
 
 			scroll:SetScroll(math.SnapTo(y * scroll.CanvasSize, richtext:GetLineHeight()))
 		end
+
 		self._recalcSavedRenderState = true
 		self._maxCharCount = 65536
 		--self:AddActionSignalTarget(self)
@@ -1463,7 +1544,7 @@ do
 
 		scrollbar:SetPos(wide - scrollbar:GetWide(), 0)
 		-- scrollbar is inside the borders.
-		scrollbar:SetSize(scrollbar:GetWide(), tall)
+		scrollbar:SetTall(tall)
 
 		-- calculate how many lines we can fully display
 		local lh = self:GetLineHeight() + self._drawOffsetY
@@ -1495,14 +1576,15 @@ do
 	end
 
 	function PANEL:SetVerticalScrollbarEnabled(state)
-		--print("SetVerticalScrollbarEnabled", state, self._vertScrollBar:IsVisible())
-		if self._vertScrollBar:IsVisible() ~= state then
-			self._vertScrollBar:SetMouseInputEnabled(state)
-			self._vertScrollBar:SetVisible(state)
+		local scrollbar = self._vertScrollBar
+		--print("SetVerticalScrollbarEnabled pre", state, scrollbar:IsVisible())
+		if scrollbar:IsVisible() ~= state then
+			scrollbar:SetMouseInputEnabled(state)
+			scrollbar:SetVisible(state)
 			self:InvalidateLineBreakStream()
 			self:InvalidateLayout()
 		end
-		--print("SetVerticalScrollbarEnabled", state, self._vertScrollBar:IsVisible())
+		--print("SetVerticalScrollbarEnabled post", state, scrollbar:IsVisible())
 	end
 
 	---Create cut/copy/paste dropdown menu
@@ -1977,14 +2059,13 @@ do
 	---Called when a URL, etc has been clicked on
 	---@param index integer
 	function PANEL:OnClickPanel(index)
-		local wBuf = ""
-
 		-- parse out the clickable text, and send it to our listeners
 		self._currentTextClickable = true
 		---@class TRenderState
 		local renderState = {}
 		self:GenerateRenderStateForTextStreamIndex(index, renderState)
 
+		local wBuf = ""
 		for i = index, #self.m_TextStream do
 			-- stop getting characters when text is no longer clickable
 			self:UpdateRenderState(i, renderState)

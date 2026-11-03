@@ -99,6 +99,22 @@ surface.CreateFont("ChatFont_Underline", { -- "ChatFont" "4"
 	antialias = false,
 })
 
+surface.CreateFont("Default_HL2", {
+    font = "Verdana",
+    extended = false,
+    size = 16,
+    weight = 0,
+    antialias = true,
+})
+
+--surface.CreateFont("Marlett_ScrollBar", {
+--    font = "Marlett",
+--    extended = true,
+--    size = 17,
+--    weight = 0,
+--    antialias = false,
+--})
+
 CHAT_FILTER_NONE		= 0
 CHAT_FILTER_JOINLEAVE	= 0x1
 CHAT_FILTER_NAMECHANGE	= 0x2
@@ -139,14 +155,6 @@ function LuaHudChat.GetSchemeColor(input, defaultColor)
 	return defaultColor
 end
 
-surface.CreateFont("Default_HL2", {
-    font = "Verdana",
-    extended = false,
-    size = 16,
-    weight = 0,
-    antialias = true,
-})
-
 local function ParseSideSettings(border, side, data)
     if not data then return end
 
@@ -176,7 +184,7 @@ local function ParseSideSettings(border, side, data)
     end
 end
 
-local Borders = {}
+LuaHudChat.Borders = {}
 for name, data in LuaHudChat.SchemeBorders:IterSubKeys() do
     local border = {
         sides = {
@@ -207,11 +215,11 @@ for name, data in LuaHudChat.SchemeBorders:IterSubKeys() do
     ParseSideSettings(border, border.sides.right, data:GetSubKey("Right"))
     ParseSideSettings(border, border.sides.bottom, data:GetSubKey("Bottom"))
 
-    Borders[name] = border
+    LuaHudChat.Borders[name] = border
 end
 
 function LuaHudChat.PaintBorder(borderName, x,y, w,h)
-    local border = Borders[borderName]
+    local border = LuaHudChat.Borders[borderName]
 
     for i, line in ipairs(border.sides.left.lines) do
         i = i - 1
@@ -293,7 +301,7 @@ end)
 
 -- hide default chatbox entirely
 hook.Remove("HUDShouldDraw", "LuaHudChat", function(name)
-	if LuaChatPanel and LuaChatPanel:IsValid() and name == "CHudChat" then
+	if name == "CHudChat" and LuaChatPanel and LuaChatPanel:IsValid() then
 		return false
 	end
 end)
@@ -439,7 +447,7 @@ hook.Add("server_cvar", "LuaHudChat", function(data)
 	local chatPanel = LuaChatPanel
 	if not (chatPanel and chatPanel:IsValid()) then return end
 
-	local text = ConstructStringReplace(language.GetPhrase("#game_server_cvar_changed"), data.cvarname, data.cvarvalue)
+	local text = LuaHudChat.ConstructStringReplace(language.GetPhrase("#game_server_cvar_changed"), data.cvarname, data.cvarvalue)
 	chatPanel:PrintF(CHAT_FILTER_SERVERMSG, text)
 end)
 hook.Add("player_changename", "LuaHudChat", function(data) -- i dont like this one
@@ -502,7 +510,7 @@ hook.Add("player_connect_client", "LuaHudChat", function(data)
 	local history = chatPanel:GetChatHistory()
 	if not (history and history:IsValid()) then return end
 
-	local text = ConstructStringReplace(language.GetPhrase("#game_player_joined_game"), data.name)
+	local text = LuaHudChat.ConstructStringReplace(language.GetPhrase("#game_player_joined_game"), data.name)
 
 	local nameStart, nameEnd = string.find(text, data.name, 1, true)
 	if not nameStart then
@@ -532,7 +540,7 @@ hook.Add("player_disconnect", "LuaHudChat", function(data)
 	local history = chatPanel:GetChatHistory()
 	if not (history and history:IsValid()) then return end
 
-	local text = ConstructStringReplace(language.GetPhrase("#game_player_left_game"), data.name, data.reason)
+	local text = LuaHudChat.ConstructStringReplace(language.GetPhrase("#game_player_left_game"), data.name, data.reason)
 
 	local nameStart, nameEnd = string.find(text, data.name, 1, true)
 	if not nameStart then
@@ -568,7 +576,7 @@ hook.Add("achievement_earned", "LuaHudChat", function(data)
 	if not (player and player:IsValid() and player:IsPlayer()) then return end
 
 	local playerName = IsValid(player) and player:Nick() or "unconnected" 
-	local text = ConstructStringReplace(language.GetPhrase("#achievement_earned"), playerName, achievements.GetName(data.achievement))
+	local text = LuaHudChat.ConstructStringReplace(language.GetPhrase("#achievement_earned"), playerName, achievements.GetName(data.achievement))
 	chatPanel:PrintF(CHAT_FILTER_ACHIEVEMENT, text)
 end)
 --]]

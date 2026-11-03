@@ -39,6 +39,7 @@ local function FiltersButton_Paint(self, w,h)
 end
 
 local cl_chatfilters = GetConVar("cl_chatfilters")
+local hud_saytext_time = GetConVar("hud_saytext_time")
 
 function PANEL:Init()
     -- (We don't actually want input until they bring up the chat line).
@@ -342,7 +343,7 @@ function PANEL:StopMessageMode(fade)
         --history:SetMouseInputEnabled(false)
         history:SetVerticalScrollbarEnabled(false)
         history:ResetAllFades(false, true, CHAT_HISTORY_FADE_TIME)
-        history:UnselectAll()
+        history:SelectNone() --history:UnselectAll()
         --history:SetVisible(false)
     end
 

@@ -1,7 +1,8 @@
 local PANEL = {}
+local BaseClass = vgui.GetControlTable("LuaRichText")
 
 -- https://github.com/Earu/EasyChat/blob/abf780df5f5897a00330d1f70aa55bc5a5cf281d/lua/easychat/client/vgui/richtext_legacy.lua#L19-L31
-function PANEL:__InsertClickableTextStart(value)
+function PANEL:InsertClickableTextStart(value)
     local prev = self.m_ClickList[#self.m_ClickList]
 
     table.insert(self.m_ClickList, {
@@ -15,26 +16,36 @@ function PANEL:__InsertClickableTextStart(value)
         table.remove(self.m_ClickList, 1)
     end
 
-    self:_InsertClickableTextStart(value)
+    BaseClass.InsertClickableTextStart(self, value)
 end
 
-function PANEL:__IsHovered()
-    return self:_IsHovered() or self:IsChildHovered()
+function PANEL:IsHovered()
+    return BaseClass.IsHovered(self) or self:IsChildHovered()
 end
 
 function PANEL:Init()
+    -- HACK: Initial init fails when subclassed
+    if self._vertScrollBar and self._vertScrollBar:IsValid() then
+        self._vertScrollBar:Remove()
+    end
+    if self.m_pInterior and self.m_pInterior:IsValid() then
+        self.m_pInterior:Remove()
+    end
+    BaseClass.Init(self)
     --  HACK: determine whether a clickable segment of text is being hovered or not
     self.m_ClickList = {}
 
-    self._InsertClickableTextStart = self._InsertClickableTextStart or self.InsertClickableTextStart -- original
-    self.InsertClickableTextStart = self.__InsertClickableTextStart -- override
-    self._IsHovered = self._IsHovered or self.IsHovered -- original
-    self.IsHovered = self.__IsHovered -- override
+    --self._InsertClickableTextStart = self._InsertClickableTextStart or self.InsertClickableTextStart -- original
+    --self.InsertClickableTextStart = self.__InsertClickableTextStart -- override
+    --self._IsHovered = self._IsHovered or self.IsHovered -- original
+    --self.IsHovered = self.__IsHovered -- override
 end
 
 
 PANEL.m_NextThinkHover = 0
 function PANEL:Think()
+    BaseClass.Think(self)
+
     local curtime = RealTime()
     if self.m_NextThinkHover <= curtime then
         self.m_NextThinkHover = curtime + 0.1
@@ -50,7 +61,7 @@ function PANEL:ThinkClickableHover()
 
     local hoveredPanel = vgui.GetHoveredPanel()
 
-    if not hoveredPanel or hoveredPanel:GetClassName() ~= "ClickPanel" then
+    if not hoveredPanel or (hoveredPanel:GetClassName() ~= "ClickPanel" and hoveredPanel:GetName() ~= "LuaClickPanel") then
         local signalValue = self.m_LastHoverSignalValue
 
         if signalValue then
@@ -185,8 +196,7 @@ function PANEL:OnTextClicked(id)
         local ply = player.GetBySteamID64(sid64)
 
         local menu = DermaMenu(true, panel)
-        local _w, _h = panel:GetSize()
-        local x,y = panel:LocalToScreen(0, _h)
+        local x,y = panel:LocalToScreen(0, panel:GetTall())
         menu:AddOption("Copy SteamID64", function()
             SetClipboardText(sid64)
         end)
@@ -201,8 +211,7 @@ function PANEL:OnTextClicked(id)
     elseif string.sub(id, 1, 6) == "Model:" then
         local modelPath = string.sub(id, 7)
         local menu = DermaMenu(true, panel)
-        local _w, _h = panel:GetSize()
-        local x,y = panel:LocalToScreen(0, _h)
+        local x,y = panel:LocalToScreen(0, panel:GetTall())
         menu:AddOption("Copy Model", function()
             SetClipboardText(modelPath)
         end)
@@ -235,5 +244,5 @@ function PANEL:AppendPlayerText(plyName, steamID64, nameColor, fadeTime)
     end
 end
 
---vgui.Register("LuaHudChatHistory", PANEL, "LuaRichText")
-vgui.Register("LuaHudChatHistory", PANEL, "RichText")
+vgui.Register("LuaHudChatHistory", PANEL, "LuaRichText")
+--vgui.Register("LuaHudChatHistory", PANEL, "RichText")

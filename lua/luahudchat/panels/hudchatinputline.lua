@@ -60,7 +60,9 @@ local function TextInput_OnKeyCode(self, keycode)
     if keycode == KEY_ENTER or keycode == KEY_PAD_ENTER then
         if hudChat and hudChat:IsValid() then
             --local textFinal = text ..
-            self:AddHistory(text)
+            if #text > 0 then
+                self:AddHistory(text)
+            end
             hudChat:Send()
             hudChat:StopMessageMode(self)
             return true
