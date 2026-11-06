@@ -661,6 +661,9 @@ do
 
 		local onRightLine = false
 		local i = startIndex
+
+		if #self.m_TextStream == 0 then return i end
+
 		while i <= #self.m_TextStream do
 			local ch = self.m_TextStream[i]
 
