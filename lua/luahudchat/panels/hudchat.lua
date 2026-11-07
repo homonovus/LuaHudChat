@@ -3,6 +3,22 @@ local PANEL = {}
 local CHAT_HISTORY_FADE_TIME = 0.25
 local CHAT_HISTORY_ONE_OVER_FADE_TIME = 1 / CHAT_HISTORY_FADE_TIME
 
+-- FIXME: deduplicate these definitions between files
+local COLOR_CHAT_DARKGREEN = Color(64, 255, 64, 255)
+--local COLOR_CHAT_GREEN = Color(153, 255, 153, 255)
+local COLOR_CHAT_YELLOW = Color(255, 178, 0, 255)
+
+local COLOR_CHAT_DEFAULT = Color(150, 210, 255, 255)	-- 0xFFFFD296
+local COLOR_CHAT_SERVERMSG = Color(150, 210, 255, 255)	-- 0xFFFFD296
+local COLOR_CHAT_JOINLEAVE = Color(160, 255, 160, 255)	-- 0xFFA0FFA0
+local COLOR_CHAT_NAMECHANGE = Color(240, 190, 80, 255)	-- 0xFF50BEF0
+
+local COLOR_CHAT_WHITE = Color(250, 250, 250, 255)		-- 0xFFFAFAFA
+local COLOR_CHAT_GRAY = Color(210, 210, 210, 255)		-- 0xFFD2D2D2
+
+--local COLOR_CHAT_DEAD = Color(255, 30, 40, 255)
+--local COLOR_CHAT_TEAM = Color(30, 160, 40, 255)
+
 function PANEL:ApplySchemeSettings()
     if LuaHudChat.ChatSettings then
         local x, y = ScreenScaleH(LuaHudChat.ChatSettings:GetInt("xpos", 10)), ScreenScaleH(LuaHudChat.ChatSettings:GetInt("ypos", 275))
@@ -162,9 +178,10 @@ function PANEL:ChatPrintF(playerIndex, filter, format, ...)
     if not playerIndex or playerIndex == 0 then
         name = "Console"
     else
+        ---@class Player
         ply = Entity(playerIndex)
-        if ply:IsValid() then
-            name = ply:Name()
+        if ply:IsValid() and ply:IsPlayer() then
+            name = ply:Nick()
         end
     end
     nameLength = #name
@@ -190,27 +207,26 @@ function PANEL:ChatPrintF(playerIndex, filter, format, ...)
     local history = self:GetChatHistory()
     local saytextFadeTime = hud_saytext_time:GetFloat()
 
-    
     if filter == CHAT_FILTER_PUBLICCHAT then
         history:AppendPlayerText(name, ply:SteamID64(), nameColor, saytextFadeTime)
-        
+
         local r,g,b = COLOR_CHAT_WHITE:Unpack()
         history:InsertColorChange(r, g, b, 255)
 
         history:AppendText(": " .. msg .. "\n")
         history:InsertFade(saytextFadeTime, LuaHudChat._CHAT_HISTORY_IDLE_FADE_TIME)
     else
-        local r,g,b = COLOR_CHAT_DEFAULT:Unpack()
+        local r, g, b = COLOR_CHAT_DEFAULT:Unpack()
         if filter == CHAT_FILTER_JOINLEAVE then
-            r,g,b = COLOR_CHAT_JOINLEAVE:Unpack()
+            r, g, b = COLOR_CHAT_JOINLEAVE:Unpack()
         elseif filter == CHAT_FILTER_NAMECHANGE	then
-            r,g,b = COLOR_CHAT_NAMECHANGE:Unpack()
+            r, g, b = COLOR_CHAT_NAMECHANGE:Unpack()
         elseif filter == CHAT_FILTER_SERVERMSG then
-            r,g,b = COLOR_CHAT_SERVERMSG:Unpack()
+            r, g, b = COLOR_CHAT_SERVERMSG:Unpack()
         --elseif filter == CHAT_FILTER_TEAMCHANGE then
-        --	r,g,b = COLOR_CHAT_TEAMCHANGE:Unpack()
+        --	r, g, b = COLOR_CHAT_TEAMCHANGE:Unpack()
         --elseif filter == CHAT_FILTER_ACHIEVEMENT then
-        --	r,g,b = COLOR_CHAT_ACHIEVEMENT:Unpack()
+        --	r, g, b = COLOR_CHAT_ACHIEVEMENT:Unpack()
         end
 
         history:InsertColorChange(r, g, b, 255)
@@ -523,7 +539,7 @@ function PANEL:GetTextColorForClient(chatColor, playerIndex)
     elseif chatColor == CHAT_TEXT_COLOR_PLAYERNAME then
         return self:GetClientColor(playerIndex)
     elseif chatColor == CHAT_TEXT_COLOR_LOCATION then
-        return CHAT_DARKGREEN
+        return COLOR_CHAT_DARKGREEN
     --elseif chatColor == CHAT_TEXT_COLOR_ACHIEVEMENT then
     --	-- SourceScheme->SteamLightGreen or self:GetDefaultTextColor()
     else
@@ -532,7 +548,7 @@ function PANEL:GetTextColorForClient(chatColor, playerIndex)
 end
 
 function PANEL:GetDefaultTextColor()
-    return CHAT_YELLOW
+    return COLOR_CHAT_YELLOW
 end
 
 vgui.Register("LuaHudChat", PANEL, "EditablePanel")

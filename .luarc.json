@@ -1,0 +1,22 @@
+{
+  "$schema": "https://raw.githubusercontent.com/LuaLS/vscode-lua/master/setting/schema.json",
+  "runtime.version": "LuaJIT",
+  "runtime.special": {
+    "include": "dofile",
+    "IncludeCS": "dofile"
+  },
+  "runtime.nonstandardSymbol": [
+    "!",
+    "!=",
+    "&&",
+    "||",
+    "//",
+    "/**/",
+    "continue"
+  ],
+  "diagnostics.disable": [
+  ],
+  "workspace.library": [
+    "${addons}/garrysmod/module/library"
+  ]
+}

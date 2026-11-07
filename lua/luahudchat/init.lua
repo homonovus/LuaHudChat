@@ -69,10 +69,10 @@ local COLOR_CHAT_GRAY = Color(210, 210, 210, 255)		-- 0xFFD2D2D2
 --local COLOR_MYSTERY = HexToColor(0xFFFFD296)
 --MsgC(COLOR_MYSTERY, "█\n")
 
-LuaHudChat.ChatControlSettings = swl4d.KeyValuesHelper(file.Read("resource/ui/BaseChat.res", "GAME"), nil, true)
-LuaHudChat.ChatFilterControlSettings = swl4d.KeyValuesHelper(file.Read("resource/ui/chatfilters.res", "GAME"), nil, true)
+LuaHudChat.ChatControlSettings = KeyValuesHelper(file.Read("resource/ui/BaseChat.res", "GAME"), nil, true)
+LuaHudChat.ChatFilterControlSettings = KeyValuesHelper(file.Read("resource/ui/chatfilters.res", "GAME"), nil, true)
 
-LuaHudChat.ChatScheme = swl4d.KeyValuesHelper(file.Read("resource/ChatScheme.res", "GAME"), nil, true)
+LuaHudChat.ChatScheme = KeyValuesHelper(file.Read("resource/ChatScheme.res", "GAME"), nil, true)
 LuaHudChat.SchemeColors = LuaHudChat.ChatScheme:GetSubKeyInsensitive("colors")
 LuaHudChat.SchemeBaseSettings = LuaHudChat.ChatScheme:GetSubKeyInsensitive("basesettings")
 
@@ -356,7 +356,7 @@ function chat.AddText(...)
 		local saytextFadeTime = hud_saytext_time:GetFloat()
 		local history = LuaChatPanel:GetChatHistory()
 
-		local r,g,b = COLOR_CHAT_DEFAULT:Unpack()
+		local r, g, b = COLOR_CHAT_DEFAULT:Unpack()
 		history:InsertColorChange(r,g,b, 255)
 
 		local nvargs = select("#", ...)
@@ -364,8 +364,8 @@ function chat.AddText(...)
 			local v = select(i, ...)
 
 			if istable(v) then
-				r,g,b = v.r or 255, v.g or 255, v.b or 255
-				history:InsertColorChange(r,g,b, 255)
+				r, g, b = v.r or 255, v.g or 255, v.b or 255
+				history:InsertColorChange(r, g, b, 255)
 			elseif isstring(v) or isnumber(v) then
 				local str = tostring(v)
 
@@ -455,6 +455,10 @@ hook.Add("server_cvar", "LuaHudChat", function(data)
 	if not (chatPanel and chatPanel:IsValid()) then return end
 
 	local text = LuaHudChat.ConstructStringReplace(language.GetPhrase("#game_server_cvar_changed"), data.cvarname, data.cvarvalue)
+
+	local suppress = hook.Call("ChatText", nil, 0, "Console", text, "servermsg")
+	if suppress == true then return end
+
 	chatPanel:PrintF(CHAT_FILTER_SERVERMSG, text)
 end)
 hook.Add("player_changename", "LuaHudChat", function(data) -- i dont like this one
@@ -465,6 +469,10 @@ hook.Add("player_changename", "LuaHudChat", function(data) -- i dont like this o
 	if not (history and history:IsValid()) then return end
 
 	local text = language.GetPhrase("#game_player_changed_name")
+	local ply = Player(data.userid)
+
+	local suppress = hook.Call("ChatText", nil, ply:IsValid() and ply:EntIndex() or 0, data.newname, text, "namechange")
+	if suppress == true then return end
 
 	local oldStart, oldEnd = string.find(text, "%s1", 1, true)
 	local newStart, newEnd = string.find(text, "%s2", 1, true)
@@ -496,7 +504,6 @@ hook.Add("player_changename", "LuaHudChat", function(data) -- i dont like this o
 		history:InsertFade(saytextFadeTime, LuaHudChat._CHAT_HISTORY_IDLE_FADE_TIME)
 	end
 
-	local ply = Player(data.userid)
 	local steamID64 = ply:SteamID64()
 	history:AppendPlayerText(firstText, steamID64, COLOR_CHAT_NAMECHANGE, saytextFadeTime)
 
@@ -518,6 +525,9 @@ hook.Add("player_connect_client", "LuaHudChat", function(data)
 	if not (history and history:IsValid()) then return end
 
 	local text = LuaHudChat.ConstructStringReplace(language.GetPhrase("#game_player_joined_game"), data.name)
+
+	local suppress = hook.Run("ChatText", data.index + 1, data.name, text, "joinleave")
+	if suppress == true then return end
 
 	local nameStart, nameEnd = string.find(text, data.name, 1, true)
 	if not nameStart then
@@ -548,6 +558,9 @@ hook.Add("player_disconnect", "LuaHudChat", function(data)
 	if not (history and history:IsValid()) then return end
 
 	local text = LuaHudChat.ConstructStringReplace(language.GetPhrase("#game_player_left_game"), data.name, data.reason)
+
+	local suppress = hook.Run("ChatText", data.index + 1, data.name, text, "joinleave")
+	if suppress == true then return end
 
 	local nameStart, nameEnd = string.find(text, data.name, 1, true)
 	if not nameStart then
@@ -587,3 +600,25 @@ hook.Add("achievement_earned", "LuaHudChat", function(data)
 	chatPanel:PrintF(CHAT_FILTER_ACHIEVEMENT, text)
 end)
 --]]
+local inChatText = false
+hook.Add("ChatText", "LuaHudChat", function(idx, name, text, msgtype)
+	if inChatText then return end
+
+	local chatPanel = LuaChatPanel
+	if not (chatPanel and chatPanel:IsValid()) then return end
+
+	local history = chatPanel:GetChatHistory()
+	if not (history and history:IsValid()) then return end
+
+	inChatText = true
+	-- FIXME?: only not running with gamemode because base ChatText prints to the console
+	local suppress = hook.Call("ChatText", nil, idx, name, text, msgtype)
+	inChatText = false
+
+	if msgtype == "none" then
+		if suppress == true then return end
+
+		-- TODO: parse for clickables?
+		chatPanel:PrintF(CHAT_FILTER_SERVERMSG, text)
+	end
+end)

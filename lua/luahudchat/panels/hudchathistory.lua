@@ -1,3 +1,4 @@
+---@class LuaHudChatHistory : LuaRichText
 local PANEL = {}
 local BaseClass = vgui.GetControlTable("LuaRichText")
 
