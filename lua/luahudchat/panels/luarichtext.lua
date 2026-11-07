@@ -202,19 +202,56 @@ do
 		btn:InvalidateLayout(true)
 	end
 	local function ScrollPanelButton_Paint(btn, w,h)
+		local bgColor
 		local borderName = "ScrollBarButtonBorder"
 		if btn:IsDown() then
+			bgColor = LuaHudChat.GetSchemeColor("ScrollBarButton.DepressedBgColor", Color(0,0,0,0))
 			borderName = "ScrollBarButtonDepressedBorder"
+		elseif btn:IsHovered() then
+			bgColor = LuaHudChat.GetSchemeColor("ScrollBarButton.ArmedBgColor", Color(0,0,0,0))
+		else
+			bgColor = LuaHudChat.GetSchemeColor("ScrollBarButton.BgColor", Color(0,0,0,0))
 		end
 
+		surface.SetDrawColor(bgColor)
+		surface.DrawRect(0, 0, w, h)
 		LuaHudChat.PaintBorder(borderName, 0,0, w,h)
 	end
 	local function ScrollPanelGrip_Paint(btn, w,h)
+		local bgColor = LuaHudChat.GetSchemeColor("ScrollBarSlider.FgColor", Color(0,0,0,0))
+		surface.SetDrawColor(bgColor)
+		surface.DrawRect(0, 0, w, h)
+
 		if LuaHudChat.Borders["ScrollBarSliderBorder"] then
 			LuaHudChat.PaintBorder("ScrollBarSliderBorder", 0,0, w,h)
 		else
 			local borderName = LuaHudChat.SchemeBorders:GetString("ButtonBorder", "RaisedBorder")
 			LuaHudChat.PaintBorder(borderName, 0,0, w,h)
+		end
+	end
+	local function ScrollPanel_PerformLayout(self)
+		local Wide = self:GetWide()
+		local BtnHeight = Wide
+		if self:GetHideButtons() then BtnHeight = 0 end
+		local Scroll = self:GetScroll() / self.CanvasSize
+		local BarSize = math.max( self:BarScale() * ( self:GetTall() - ( BtnHeight * 2 ) ), BtnHeight )
+		local Track = self:GetTall() - ( BtnHeight * 2 ) - BarSize
+		Track = Track + 1
+
+		Scroll = Scroll * Track
+
+		self.btnGrip:SetPos( 0, BtnHeight + Scroll )
+		self.btnGrip:SetSize( Wide, BarSize )
+
+		if ( BtnHeight > 0 ) then
+			self.btnUp:SetPos( 0, 0 )
+			self.btnUp:SetSize( Wide, BtnHeight )
+
+			self.btnDown:SetPos( 0, self:GetTall() - BtnHeight )
+			self.btnDown:SetSize( Wide, BtnHeight )
+		else
+			self.btnDown:SetSize( Wide, BtnHeight )
+			self.btnUp:SetSize( Wide, BtnHeight )
 		end
 	end
 
@@ -287,27 +324,39 @@ do
 		self._mouseSelection = false
 		self._mouseDragSelection = false
 
-		self._vertScrollBar = vgui.Create("DVScrollBar", self, "ScrollBar")
-		self._vertScrollBar:SetWide(ScreenScaleH(LuaHudChat.SchemeBaseSettings:GetInt("ScrollBar.Wide", 17)))
 
-		self._vertScrollBar.btnUp:SetCursor("arrow")
-		self._vertScrollBar.btnDown:SetCursor("arrow")
+		local scrollbar = vgui.Create("DVScrollBar", self, "ScrollBar")
+		self._vertScrollBar = scrollbar
+		scrollbar:SetWide(ScreenScaleH(LuaHudChat.SchemeBaseSettings:GetInt("ScrollBar.Wide", 17)))
 
-		self._vertScrollBar.btnUp.DoClick = function()end
-		self._vertScrollBar.btnDown.DoClick = function()end
+		scrollbar.btnUp:SetCursor("arrow")
+		scrollbar.btnDown:SetCursor("arrow")
 
-		self._vertScrollBar.btnUp.OnMousePressed = ScrollPanelButton_OnMousePressed
-		self._vertScrollBar.btnDown.OnMousePressed = ScrollPanelButton_OnMousePressed
-		self._vertScrollBar.btnUp.Paint = ScrollPanelButton_Paint
-		self._vertScrollBar.btnDown.Paint = ScrollPanelButton_Paint
-		self._vertScrollBar.btnGrip.Paint = ScrollPanelGrip_Paint
+		scrollbar.btnUp.DoClick = function()end
+		scrollbar.btnDown.DoClick = function()end
 
-		self._vertScrollBar.btnUp:SetFont("Marlett")
-		self._vertScrollBar.btnUp:SetText("t")
-		self._vertScrollBar.btnDown:SetFont("Marlett")
-		self._vertScrollBar.btnDown:SetText("u")
+		scrollbar.btnUp.OnMousePressed = ScrollPanelButton_OnMousePressed
+		scrollbar.btnDown.OnMousePressed = ScrollPanelButton_OnMousePressed
+		scrollbar.btnUp.Paint = ScrollPanelButton_Paint
+		scrollbar.btnDown.Paint = ScrollPanelButton_Paint
+		scrollbar.btnGrip.Paint = ScrollPanelGrip_Paint
+		scrollbar.Paint = function(scroll, w,h)
+			local bgColor = LuaHudChat.GetSchemeColor("ScrollBarSlider.BgColor", Color(255, 255, 255))
+			surface.SetDrawColor(bgColor)
 
-		self._vertScrollBar.Think = function(scroll)
+			local btnUpTall = scroll.btnUp:GetTall()
+			surface.DrawRect(0, btnUpTall, w, h - scroll.btnDown:GetTall() - btnUpTall)
+		end
+		scrollbar.PerformLayout = ScrollPanel_PerformLayout
+
+		scrollbar.btnUp:SetFont("Marlett")
+		scrollbar.btnUp:SetText("t")
+		scrollbar.btnUp:SetTextColor(LuaHudChat.GetSchemeColor("ScrollBarButton.FgColor", Color(255, 255, 255)))
+		scrollbar.btnDown:SetFont("Marlett")
+		scrollbar.btnDown:SetText("u")
+		scrollbar.btnDown:SetTextColor(LuaHudChat.GetSchemeColor("ScrollBarButton.FgColor", Color(255, 255, 255)))
+
+		scrollbar.Think = function(scroll)
 			local direction = 0
 
 			if scroll.btnUp:IsDown() then -- top button is down
@@ -337,9 +386,9 @@ do
 			end
 		end
 
-		--self._vertScrollBar:SetVisible(false)
-		--self._vertScrollBar:AddActionSignalTarget(self)
-		self._vertScrollBar.OnMouseWheeled = function(scroll, delta)
+		--scrollbar:SetVisible(false)
+		--scrollbar:AddActionSignalTarget(self)
+		scrollbar.OnMouseWheeled = function(scroll, delta)
 			if scroll:IsVisible() then
 				local val = scroll:GetScroll()
 				val = val - delta
@@ -347,7 +396,7 @@ do
 				self._recalcSavedRenderState = true
 			end
 		end
-		self._vertScrollBar.OnCursorMoved = function(scroll, lx, ly)
+		scrollbar.OnCursorMoved = function(scroll, lx, ly)
 			if not (scroll.Enabled and scroll.Dragging) then return end
 
 			local richtext = scroll:GetParent()
@@ -360,8 +409,6 @@ do
 
 			local trackSize = scroll:GetTall() - btnHeight * 2 - scroll.btnGrip:GetTall()
 			y = y / trackSize
-
-			--print("eee", richtext:GetLineHeight(), y * scroll.CanvasSize, math.SnapTo(y * scroll.CanvasSize, richtext:GetLineHeight()))
 
 			scroll:SetScroll(math.SnapTo(y * scroll.CanvasSize, richtext:GetLineHeight()))
 		end
@@ -2022,8 +2069,6 @@ do
 		if startIndex > #self.m_TextStream then
 			startIndex = #self.m_TextStream
 		end
-
-		--print("getstartdrawindex", startIndex, lineBreakIndexIndex, startLine)
 
 		return startIndex, lineBreakIndexIndex
 	end

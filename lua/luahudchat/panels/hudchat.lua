@@ -66,6 +66,7 @@ function PANEL:Init()
 
     self.m_FiltersButton:SetDrawBackground(false)
     self.m_FiltersButton:SetPaintBorderEnabled(true)
+    self.m_FiltersButton:SetTextColor(LuaHudChat.GetSchemeColor("Button.TextColor", Color(255, 255, 255)))
     self.m_FiltersButton.Paint = FiltersButton_Paint
     self.m_FiltersButton:NoClipping(true)
 
@@ -191,7 +192,7 @@ function PANEL:ChatPrintF(playerIndex, filter, format, ...)
 
     
     if filter == CHAT_FILTER_PUBLICCHAT then
-        self:AppendPlayerText(name, ply:SteamID64(), nameColor, saytextFadeTime)
+        history:AppendPlayerText(name, ply:SteamID64(), nameColor, saytextFadeTime)
         
         local r,g,b = COLOR_CHAT_WHITE:Unpack()
         history:InsertColorChange(r, g, b, 255)
@@ -373,6 +374,7 @@ function PANEL:StopMessageMode(fade)
     --self:SetVisible(false)
 end
 
+local scrollbar_fadein = CreateConVar("hud_saytext_scrollbar_fadein", "1", FCVAR_ARCHIVE, "Enable alpha fade in for the chat history scrollbar")
 PANEL.m_HistoryFadeTime = 0
 function PANEL:FadeChatHistory()
     local frac = (self.m_HistoryFadeTime - RealTime()) * CHAT_HISTORY_ONE_OVER_FADE_TIME
@@ -386,10 +388,19 @@ function PANEL:FadeChatHistory()
             local inputPanel = self.m_ChatInput.m_Input
             local bgColor = self:GetBGColor()
 
+			local scrollbar = history._vertScrollBar
+
             if self:IsMouseInputEnabled() then
                 -- fade in
-                --self:SetAlpha(255)
                 history:SetBGColor(0,0,0, LuaHudChat._CHAT_HISTORY_ALPHA - alpha)
+
+                if scrollbar and scrollbar:IsValid() then
+                    if scrollbar_fadein:GetBool() then
+                        scrollbar:SetAlpha((LuaHudChat._CHAT_HISTORY_ALPHA*2) - alpha)
+                    else
+                        scrollbar:SetAlpha(255)
+                    end
+                end
 
                 bgColor.a = LuaHudChat._CHAT_HISTORY_ALPHA - alpha
                 self:SetBGColor(bgColor)
@@ -400,6 +411,14 @@ function PANEL:FadeChatHistory()
             else
                 -- fade out
                 history:SetBGColor(0,0,0, alpha)
+
+				if scrollbar and scrollbar:IsValid() then
+					if scrollbar_fadein:GetBool() then
+						scrollbar:SetAlpha(math.Clamp(frac, 0,1) * 255)
+					else
+						scrollbar:SetAlpha(0)
+					end
+				end
 
                 bgColor.a = alpha
                 self:SetBGColor(bgColor)

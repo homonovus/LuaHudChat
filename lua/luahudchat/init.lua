@@ -2,6 +2,8 @@ local KeyValuesHelper = include("luahudchat/classes/keyvalues.lua")
 
 LuaHudChat = LuaHudChat or {}
 
+local text_clickable = CreateConVar("hud_saytext_clickable", "1", FCVAR_ARCHIVE, "Allows portions of text in chat to be clicked")
+
 include("panels/luarichtext.lua")
 include("panels/hudchathistory.lua")
 include("panels/hudchatfiltercheckbox.lua")
@@ -368,21 +370,26 @@ function chat.AddText(...)
 				local str = tostring(v)
 
 				--local foundClickable = false
-				local i1, i2 = string.find(str, "[%w_/]+%.mdl")
-				if i1 then
-					local modelPath = string.sub(str, i1, i2)
-					--foundClickable = true
+				if text_clickable:GetBool() then
+					local i1, i2 = string.find(str, "[%w_/]+%.mdl")
+					if i1 then
+						local modelPath = string.sub(str, i1, i2)
+						--foundClickable = true
 
-					history:AppendText(string.sub(str, 1, i1 - 1))
-					history:InsertFade(saytextFadeTime, LuaHudChat._CHAT_HISTORY_IDLE_FADE_TIME)
+						history:AppendText(string.sub(str, 1, i1 - 1))
+						history:InsertFade(saytextFadeTime, LuaHudChat._CHAT_HISTORY_IDLE_FADE_TIME)
 
-					history:InsertClickableTextStart("Model:"..modelPath)
-					history:AppendText(modelPath)
-					history:InsertFade(saytextFadeTime, LuaHudChat._CHAT_HISTORY_IDLE_FADE_TIME)
-					history:InsertClickableTextEnd()
+						history:InsertClickableTextStart("Model:"..modelPath)
+						history:AppendText(modelPath)
+						history:InsertFade(saytextFadeTime, LuaHudChat._CHAT_HISTORY_IDLE_FADE_TIME)
+						history:InsertClickableTextEnd()
 
-					history:AppendText(string.sub(str, i2 + 1))
-					history:InsertFade(saytextFadeTime, LuaHudChat._CHAT_HISTORY_IDLE_FADE_TIME)
+						history:AppendText(string.sub(str, i2 + 1))
+						history:InsertFade(saytextFadeTime, LuaHudChat._CHAT_HISTORY_IDLE_FADE_TIME)
+					else
+						history:AppendText(str)
+						history:InsertFade(saytextFadeTime, LuaHudChat._CHAT_HISTORY_IDLE_FADE_TIME)
+					end
 				else
 					history:AppendText(str)
 					history:InsertFade(saytextFadeTime, LuaHudChat._CHAT_HISTORY_IDLE_FADE_TIME)

@@ -1,6 +1,8 @@
 local PANEL = {}
 local BaseClass = vgui.GetControlTable("LuaRichText")
 
+local text_clickable = GetConVar("hud_saytext_clickable")
+
 -- https://github.com/Earu/EasyChat/blob/abf780df5f5897a00330d1f70aa55bc5a5cf281d/lua/easychat/client/vgui/richtext_legacy.lua#L19-L31
 function PANEL:InsertClickableTextStart(value)
     local prev = self.m_ClickList[#self.m_ClickList]
@@ -230,7 +232,7 @@ function PANEL:AppendPlayerText(plyName, steamID64, nameColor, fadeTime)
     self:InsertColorChange(r, g, b, 255)
 
     local bIsPlayer = steamID64 and steamID64 ~= ""
-    local bAllowClickableText = bIsPlayer and (true)
+    local bAllowClickableText = bIsPlayer and text_clickable:GetBool()
 
     local name = plyName or "Console"
 
