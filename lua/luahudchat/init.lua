@@ -559,7 +559,7 @@ hook.Add("player_disconnect", "LuaHudChat", function(data)
 
 	local text = LuaHudChat.ConstructStringReplace(language.GetPhrase("#game_player_left_game"), data.name, data.reason)
 
-	local suppress = hook.Run("ChatText", data.index + 1, data.name, text, "joinleave")
+	local suppress = hook.Run("ChatText", 0, data.name, text, "joinleave")
 	if suppress == true then return end
 
 	local nameStart, nameEnd = string.find(text, data.name, 1, true)
