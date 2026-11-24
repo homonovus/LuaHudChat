@@ -201,32 +201,32 @@ do
 		btn:OnDepressed()
 		btn:InvalidateLayout(true)
 	end
-	local function ScrollPanelButton_Paint(btn, w,h)
+	local function ScrollPanelButton_Paint(btn, w, h)
 		local bgColor
 		local borderName = "ScrollBarButtonBorder"
 		if btn:IsDown() then
-			bgColor = LuaHudChat.GetSchemeColor("ScrollBarButton.DepressedBgColor", Color(0,0,0,0))
+			bgColor = LuaHudChat.GetSchemeColor("ScrollBarButton.DepressedBgColor", Color(0, 0, 0, 0))
 			borderName = "ScrollBarButtonDepressedBorder"
 		elseif btn:IsHovered() then
-			bgColor = LuaHudChat.GetSchemeColor("ScrollBarButton.ArmedBgColor", Color(0,0,0,0))
+			bgColor = LuaHudChat.GetSchemeColor("ScrollBarButton.ArmedBgColor", Color(0, 0, 0, 0))
 		else
-			bgColor = LuaHudChat.GetSchemeColor("ScrollBarButton.BgColor", Color(0,0,0,0))
+			bgColor = LuaHudChat.GetSchemeColor("ScrollBarButton.BgColor", Color(0, 0, 0, 0))
 		end
 
 		surface.SetDrawColor(bgColor)
 		surface.DrawRect(0, 0, w, h)
-		LuaHudChat.PaintBorder(borderName, 0,0, w,h)
+		LuaHudChat.PaintBorder(borderName, 0, 0, w, h)
 	end
-	local function ScrollPanelGrip_Paint(btn, w,h)
-		local bgColor = LuaHudChat.GetSchemeColor("ScrollBarSlider.FgColor", Color(0,0,0,0))
+	local function ScrollPanelGrip_Paint(btn, w, h)
+		local bgColor = LuaHudChat.GetSchemeColor("ScrollBarSlider.FgColor", Color(0, 0, 0, 0))
 		surface.SetDrawColor(bgColor)
 		surface.DrawRect(0, 0, w, h)
 
 		if LuaHudChat.Borders["ScrollBarSliderBorder"] then
-			LuaHudChat.PaintBorder("ScrollBarSliderBorder", 0,0, w,h)
+			LuaHudChat.PaintBorder("ScrollBarSliderBorder", 0, 0, w, h)
 		else
 			local borderName = LuaHudChat.SchemeBorders:GetString("ButtonBorder", "RaisedBorder")
-			LuaHudChat.PaintBorder(borderName, 0,0, w,h)
+			LuaHudChat.PaintBorder(borderName, 0, 0, w, h)
 		end
 	end
 	local function ScrollPanel_PerformLayout(self)
@@ -234,30 +234,30 @@ do
 		local BtnHeight = Wide
 		if self:GetHideButtons() then BtnHeight = 0 end
 		local Scroll = self:GetScroll() / self.CanvasSize
-		local BarSize = math.max( self:BarScale() * ( self:GetTall() - ( BtnHeight * 2 ) ), BtnHeight )
-		local Track = self:GetTall() - ( BtnHeight * 2 ) - BarSize
+		local BarSize = math.max(self:BarScale() * (self:GetTall() - (BtnHeight * 2)), BtnHeight)
+		local Track = self:GetTall() - (BtnHeight * 2) - BarSize
 		Track = Track + 1
 
 		Scroll = Scroll * Track
 
-		self.btnGrip:SetPos( 0, BtnHeight + Scroll )
-		self.btnGrip:SetSize( Wide, BarSize )
+		self.btnGrip:SetPos(0, BtnHeight + Scroll)
+		self.btnGrip:SetSize(Wide, BarSize)
 
-		if ( BtnHeight > 0 ) then
-			self.btnUp:SetPos( 0, 0 )
-			self.btnUp:SetSize( Wide, BtnHeight )
+		if BtnHeight > 0 then
+			self.btnUp:SetPos(0, 0)
+			self.btnUp:SetSize(Wide, BtnHeight)
 
-			self.btnDown:SetPos( 0, self:GetTall() - BtnHeight )
-			self.btnDown:SetSize( Wide, BtnHeight )
+			self.btnDown:SetPos(0, self:GetTall() - BtnHeight)
+			self.btnDown:SetSize(Wide, BtnHeight)
 		else
-			self.btnDown:SetSize( Wide, BtnHeight )
-			self.btnUp:SetSize( Wide, BtnHeight )
+			self.btnDown:SetSize(Wide, BtnHeight)
+			self.btnUp:SetSize(Wide, BtnHeight)
 		end
 	end
 
 	-- scroll bar will scroll a little, then continuous scroll like in windows
-	local SCROLL_BAR_DELAY = 0.400	-- default delay for all scroll bars
-	local SCROLL_BAR_SPEED = 0.050	-- this is how fast the bar scrolls when you hold down the arrow button
+	local SCROLL_BAR_DELAY = 0.400 -- default delay for all scroll bars
+	local SCROLL_BAR_SPEED = 0.050 -- this is how fast the bar scrolls when you hold down the arrow button
 
 	function PANEL:Init()
 		do
@@ -332,15 +332,15 @@ do
 		scrollbar.btnUp:SetCursor("arrow")
 		scrollbar.btnDown:SetCursor("arrow")
 
-		scrollbar.btnUp.DoClick = function()end
-		scrollbar.btnDown.DoClick = function()end
+		scrollbar.btnUp.DoClick = function() end
+		scrollbar.btnDown.DoClick = function() end
 
 		scrollbar.btnUp.OnMousePressed = ScrollPanelButton_OnMousePressed
 		scrollbar.btnDown.OnMousePressed = ScrollPanelButton_OnMousePressed
 		scrollbar.btnUp.Paint = ScrollPanelButton_Paint
 		scrollbar.btnDown.Paint = ScrollPanelButton_Paint
 		scrollbar.btnGrip.Paint = ScrollPanelGrip_Paint
-		scrollbar.Paint = function(scroll, w,h)
+		scrollbar.Paint = function(scroll, w, h)
 			local bgColor = LuaHudChat.GetSchemeColor("ScrollBarSlider.BgColor", Color(255, 255, 255))
 			surface.SetDrawColor(bgColor)
 
@@ -359,7 +359,7 @@ do
 		scrollbar.Think = function(scroll)
 			local direction = 0
 
-			if scroll.btnUp:IsDown() then -- top button is down
+			if scroll.btnUp:IsDown() then    -- top button is down
 				direction = -1
 			elseif scroll.btnDown:IsDown() then -- bottom button is down
 				direction = 1
@@ -367,7 +367,8 @@ do
 
 			if direction ~= 0 then -- a button is down
 				if scroll._respond then
-					local newValue = math.Clamp(math.floor(scroll:GetScroll() + (direction * (self:GetLineHeight()+1))), 0, scroll.CanvasSize)
+					local newValue = math.Clamp(math.floor(scroll:GetScroll() + (direction * (self:GetLineHeight() + 1))), 0,
+						scroll.CanvasSize)
 					scroll:AddScroll(direction)
 					--scroll:SetScroll(newValue)
 					self._recalcSavedRenderState = true
