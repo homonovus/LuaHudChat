@@ -705,7 +705,7 @@ do
 		self._pixelsIndent = self.m_CachedRenderState.pixelsIndent
 		self._currentTextClickable = self.m_CachedRenderState.textClickable
 		local renderState = {}
-		table.CopyFromTo(self.m_CachedRenderState, renderState)
+		table.Merge(renderState, self.m_CachedRenderState)
 
 		local onRightLine = false
 		local i = startIndex
@@ -917,7 +917,7 @@ do
 		end
 		-- copy off the cached render state
 		local renderState = {}
-		table.CopyFromTo(self.m_CachedRenderState, renderState)
+		table.Merge(renderState, self.m_CachedRenderState)
 
 		self._pixelsIndent = self.m_CachedRenderState.pixelsIndent
 		self._currentTextClickable = self.m_CachedRenderState.textClickable
@@ -1227,7 +1227,7 @@ do
 			-- add to text stream, based off existing item
 			---@class TFormatStream
 			local streamItem = {}
-			table.CopyFromTo(prevItem, streamItem)
+			table.Merge(streamItem, prevItem)
 
 			streamItem.color = Color(r, g, b, a)
 			streamItem.textStreamIndex = #self.m_TextStream + 1
@@ -1249,7 +1249,7 @@ do
 			-- add to text stream, based off existing item
 			---@class TFormatStream
 			local streamItem = {}
-			table.CopyFromTo(prevItem, streamItem)
+			table.Merge(streamItem, prevItem)
 
 			prevItem.fade = {
 				flFadeStartTime = SysTime() + flSustain,
@@ -1298,7 +1298,7 @@ do
 			-- add to text stream, based off existing item
 			---@class TFormatStream
 			local streamItem = {}
-			table.CopyFromTo(prevItem, streamItem)
+			table.Merge(streamItem, prevItem)
 
 			streamItem.pixelsIndent = pixelsIndent
 			streamItem.textStreamIndex = #self.m_TextStream + 1
@@ -1318,7 +1318,7 @@ do
 			-- add to text stream, based off existing item
 			---@class TFormatStream
 			local formatStreamCopy = {}
-			table.CopyFromTo(prevItem, formatStreamCopy)
+			table.Merge(formatStreamCopy, prevItem)
 			table.insert(self.m_FormatStream, formatStreamCopy)
 
 			pFormatStream = formatStreamCopy
@@ -1344,7 +1344,7 @@ do
 			-- add to text stream, based off existing item
 			---@class TFormatStream
 			local streamItem = {}
-			table.CopyFromTo(prevItem, streamItem)
+			table.Merge(streamItem, prevItem)
 			streamItem.textClickable = false
 			streamItem.textStreamIndex = #self.m_TextStream + 1
 			table.insert(self.m_FormatStream, streamItem)
