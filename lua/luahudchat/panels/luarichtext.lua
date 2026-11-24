@@ -586,7 +586,7 @@ do
 		self:InvalidateLineBreakStream()
 		self:InvalidateLayout()
 
-		if self._vertScrollBar:IsVisible() then
+		if self:IsScrollbarVisible() then
 			--self._vertScrollBar:MakeReadyForUse()
 			self.m_pInterior:SetSize(w - self._vertScrollBar:GetWide(), h)
 		else
@@ -1378,7 +1378,7 @@ do
 
 		local selection0, selection1 = -1, -1
 
-		if self._vertScrollBar:IsVisible() then
+		if self:IsScrollbarVisible() then
 			wide = wide - self._vertScrollBar:GetWide()
 		end
 
@@ -1601,11 +1601,13 @@ do
 		local lh = self:GetLineHeight() + self._drawOffsetY
 		local displayLines = math.floor(tall / lh)
 		local numLines = #self.m_LineBreaks
+		local oldVisible = scrollbar:IsVisible()
 
 		if numLines <= displayLines then
 			-- disable the scrollbar
 			scrollbar:SetUp(tall, numLines * lh)
 			scrollbar:SetEnabled(false)
+			scrollbar:SetVisible(false)
 
 			if self.m_bUnusedScrollbarInvis then
 				self:SetVerticalScrollbarEnabled(false)
@@ -1618,6 +1620,7 @@ do
 			-- set the scrollbars range
 			scrollbar:SetUp(tall, numLines * lh)
 			scrollbar:SetEnabled(true)
+			scrollbar:SetVisible(oldVisible)
 
 			if bCurrentlyAtEnd then
 				scrollbar:SetScroll(numLines * lh)
@@ -1775,12 +1778,12 @@ do
 				self:GotoTextEnd()
 			elseif code == KEY_PAGEUP then
 				-- if there is a scroll bar scroll down one rangewindow
-				if self._vertScrollBar:IsVisible() then
+				if self:IsScrollbarVisible() then
 					-- TODO
 				end
 			elseif code == KEY_PAGEDOWN then
 				-- if there is a scroll bar scroll down one rangewindow
-				if self._vertScrollBar:IsVisible() then
+				if self:IsScrollbarVisible() then
 					-- TODO
 				end
 			else
@@ -1813,7 +1816,7 @@ do
 	---Scrolls the list
 	---@param delta number amount to move scrollbar up
 	function PANEL:MoveScrollBarDirect(delta)
-		if self._vertScrollBar:IsVisible() then
+		if self:IsScrollbarVisible() then
 			local val = self._vertScrollBar:GetScroll()
 			val = val - delta
 			self._vertScrollBar:SetScroll(val)
@@ -2229,7 +2232,7 @@ do
 	---data accessor
 	---@return boolean
 	function PANEL:IsScrollbarVisible()
-		return self._vertScrollBar:IsVisible()
+		return self._vertScrollBar.Enabled and self._vertScrollBar:IsVisible()
 	end
 
 	---@param font string
