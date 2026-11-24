@@ -1396,9 +1396,9 @@ do
 			table.Empty(self.m_LineBreaks)
 		else
 			-- remove the rest of the linebreaks list since its out of date.
-			for i = self._recalculateBreaksIndex + 1, #self.m_LineBreaks do
+			local i = self._recalculateBreaksIndex + 1
+			while i <= #self.m_LineBreaks do
 				table.remove(self.m_LineBreaks, i)
-				--i = i - 1
 			end
 			startChar = self.m_LineBreaks[self._recalculateBreaksIndex]
 			lineStartIndex = self.m_LineBreaks[self._recalculateBreaksIndex]
